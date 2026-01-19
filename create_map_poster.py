@@ -235,7 +235,7 @@ def get_coordinates(city, country):
     else:
         raise ValueError(f"Could not find coordinates for {city}, {country}")
 
-def create_poster(city, country, point, dist, output_file, figsize=(12, 16), dpi=300, project_metric=True):
+def create_poster(city, country, point, dist, output_file, figsize=(12, 16), dpi=300, project_metric=True, landscape=False):
     print(f"\nGenerating map for {city}, {country}...")
     print(f"Quality settings: {figsize[0]}x{figsize[1]} inches @ {dpi} DPI ({figsize[0]*dpi}x{figsize[1]*dpi} pixels)")
 
@@ -276,6 +276,9 @@ def create_poster(city, country, point, dist, output_file, figsize=(12, 16), dpi
     print("✓ All data downloaded successfully!")
     
     # 2. Setup Plot
+    size = (12, 16)
+    if landscape:
+        size = (16, 12)
     print("Rendering map...")
     fig, ax = plt.subplots(figsize=figsize, facecolor=THEME['bg'])
     ax.set_facecolor(THEME['bg'])
@@ -406,6 +409,7 @@ Options:
   --country, -C     Country name (required)
   --theme, -t       Theme name (default: feature_based)
   --distance, -d    Map radius in meters (default: 29000)
+  --landscape, -L   Render in landscape mode (default: False)
   --list-themes     List all available themes
   --project-metric  Reproject data to a local metric CRS to avoid distortion
 
@@ -472,6 +476,7 @@ Examples:
     parser.add_argument('--distance', '-d', type=int, default=29000, help='Map radius in meters (default: 29000)')
     parser.add_argument('--quality', '-q', type=str, default='standard', choices=['standard', 'high', 'ultra'],
                         help='Output quality level: standard (3600x4800px), high (6400x8400px), ultra (10800x14400px) (default: standard)')
+    parser.add_argument('--landscape', '-L', action='store_true', default=False, help='Render in landscape mode (default: False)')
     parser.add_argument('--list-themes', action='store_true', help='List all available themes')
     
     args = parser.parse_args()
@@ -523,7 +528,7 @@ Examples:
     try:
         coords = get_coordinates(args.city, args.country)
         output_file = generate_output_filename(args.city, args.theme)
-        create_poster(args.city, args.country, coords, args.distance, output_file, figsize=figsize, dpi=dpi, project_metric=args.project_metric)
+        create_poster(args.city, args.country, coords, args.distance, output_file, figsize=figsize, dpi=dpi, project_metric=args.project_metric, landscape=args.landscape)
         
         print("\n" + "=" * 50)
         print("✓ Poster generation complete!")
