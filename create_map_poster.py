@@ -15,6 +15,28 @@ THEMES_DIR = "themes"
 FONTS_DIR = "fonts"
 POSTERS_DIR = "posters"
 
+# Quality presets: (figsize_width, figsize_height, dpi)
+QUALITY_PRESETS = {
+    'standard': {
+        'figsize': (12, 16),
+        'dpi': 300,
+        'resolution': '3600x4800px',
+        'description': 'Standard quality - Good for digital use and small prints'
+    },
+    'high': {
+        'figsize': (16, 21),
+        'dpi': 400,
+        'resolution': '6400x8400px',
+        'description': 'High quality - Excellent for medium to large prints'
+    },
+    'ultra': {
+        'figsize': (18, 24),
+        'dpi': 600,
+        'resolution': '10800x14400px',
+        'description': 'Ultra quality - Professional printing and large format'
+    }
+}
+
 def load_fonts():
     """
     Load Roboto fonts from the fonts directory.
@@ -213,9 +235,10 @@ def get_coordinates(city, country):
     else:
         raise ValueError(f"Could not find coordinates for {city}, {country}")
 
-def create_poster(city, country, point, dist, output_file, project_metric=False):
+def create_poster(city, country, point, dist, output_file, figsize=(12, 16), dpi=300, project_metric=True):
     print(f"\nGenerating map for {city}, {country}...")
-    
+    print(f"Quality settings: {figsize[0]}x{figsize[1]} inches @ {dpi} DPI ({figsize[0]*dpi}x{figsize[1]*dpi} pixels)")
+
     # Progress bar for data fetching
     with tqdm(total=3, desc="Fetching map data", unit="step", bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
         # 1. Fetch Street Network
@@ -254,7 +277,7 @@ def create_poster(city, country, point, dist, output_file, project_metric=False)
     
     # 2. Setup Plot
     print("Rendering map...")
-    fig, ax = plt.subplots(figsize=(12, 16), facecolor=THEME['bg'])
+    fig, ax = plt.subplots(figsize=figsize, facecolor=THEME['bg'])
     ax.set_facecolor(THEME['bg'])
     ax.set_position([0, 0, 1, 1])
     
@@ -334,7 +357,7 @@ def create_poster(city, country, point, dist, output_file, project_metric=False)
 
     # 5. Save
     print(f"Saving to {output_file}...")
-    plt.savefig(output_file, dpi=300, facecolor=THEME['bg'])
+    plt.savefig(output_file, dpi=dpi, facecolor=THEME['bg'])
     plt.close()
     print(f"✓ Done! Poster saved as {output_file}")
 
@@ -401,7 +424,7 @@ def list_themes():
     if not available_themes:
         print("No themes found in 'themes/' directory.")
         return
-    
+
     print("\nAvailable Themes:")
     print("-" * 60)
     for theme_name in available_themes:
@@ -418,6 +441,16 @@ def list_themes():
         print(f"    {display_name}")
         if description:
             print(f"    {description}")
+        print()
+
+def list_quality_levels():
+    """List all available quality presets."""
+    print("\nAvailable Quality Levels:")
+    print("-" * 60)
+    for level, specs in QUALITY_PRESETS.items():
+        print(f"  {level}")
+        print(f"    {specs['description']}")
+        print(f"    Output: {specs['resolution']} ({specs['figsize'][0]}x{specs['figsize'][1]} inches @ {specs['dpi']} DPI)")
         print()
 
 if __name__ == "__main__":
@@ -437,9 +470,9 @@ Examples:
     parser.add_argument('--country', '-C', type=str, help='Country name')
     parser.add_argument('--theme', '-t', type=str, default='feature_based', help='Theme name (default: feature_based)')
     parser.add_argument('--distance', '-d', type=int, default=29000, help='Map radius in meters (default: 29000)')
+    parser.add_argument('--quality', '-q', type=str, default='standard', choices=['standard', 'high', 'ultra'],
+                        help='Output quality level: standard (3600x4800px), high (6400x8400px), ultra (10800x14400px) (default: standard)')
     parser.add_argument('--list-themes', action='store_true', help='List all available themes')
-    parser.add_argument('--project-metric', action='store_true',
-                        help='Reproject map data to a local metric CRS to avoid distortion')
     
     args = parser.parse_args()
     
@@ -447,10 +480,15 @@ Examples:
     if len(os.sys.argv) == 1:
         print_examples()
         os.sys.exit(0)
-    
+
     # List themes if requested
     if args.list_themes:
         list_themes()
+        os.sys.exit(0)
+
+    # List quality levels if requested
+    if args.list_quality:
+        list_quality_levels()
         os.sys.exit(0)
     
     # Validate required arguments
@@ -469,15 +507,23 @@ Examples:
     print("=" * 50)
     print("City Map Poster Generator")
     print("=" * 50)
-    
+
+    # Get quality settings
+    quality_preset = QUALITY_PRESETS[args.quality]
+    figsize = quality_preset['figsize']
+    dpi = quality_preset['dpi']
+
+    print(f"Quality Level: {args.quality.upper()}")
+    print(f"Resolution: {quality_preset['resolution']}")
+
     # Load theme
     THEME = load_theme(args.theme)
-    
+
     # Get coordinates and generate poster
     try:
         coords = get_coordinates(args.city, args.country)
         output_file = generate_output_filename(args.city, args.theme)
-        create_poster(args.city, args.country, coords, args.distance, output_file, project_metric=args.project_metric)
+        create_poster(args.city, args.country, coords, args.distance, output_file, figsize=figsize, dpi=dpi, project_metric=args.project_metric)
         
         print("\n" + "=" * 50)
         print("✓ Poster generation complete!")
